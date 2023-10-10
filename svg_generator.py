@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+'''
+    File name: svg_generator.py
+    Author: Tomáš Vlček
+    Date created: 2023-10-10
+    License: GNU General Public License v3.0
+    Python Version: ≥3.11.5
+'''
+
 import defopt
 import drawsvg as svg
 import imagesize
@@ -8,7 +16,7 @@ from copy import deepcopy
 
 @dataclass
 class Picture:
-    """Ahoj."""
+    '''Wrapper around the SVG canvas.'''
     picture_filepath: str
     picture: svg.Drawing
     width: int
@@ -26,7 +34,7 @@ def InitializePicture(width: int, height: int, border_size: int, picture_filepat
         width + 2 * border_size, 
         height + 2 * border_size, 
         origin=(0, 0), 
-        font_family='Libertinus Serif'
+        font_family='Charis SIL'
     )
     wrapped_picture: Picture = Picture(picture_filepath, svg_picture, width, height, border_size)
     return wrapped_picture
