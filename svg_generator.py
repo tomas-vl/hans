@@ -124,10 +124,10 @@ def addLetterBetweenPositions(owp: Picture, left_pos: int, right_pos: int, lette
 def main():
     width: int = 0
     height: int = 0
-    width, height = [int(x) for x in imagesize.get('test_input.png')]
+    width, height = [int(x) for x in imagesize.get('test_input/01.png')]
     print(width, height)
 
-    output_picture: Picture = InitializePicture(width, height, 40, 'test_input.png')
+    output_picture: Picture = InitializePicture(width, height, 40, 'test_input/01.png')
     output_picture = createBaseSVG(output_picture, '1848', '18,48')
 
     output_picture = addLine(output_picture, 350)
@@ -136,7 +136,7 @@ def main():
     output_picture = addLine(output_picture, 740)
     output_picture = addLine(output_picture, 900)
     output_picture = addLetterBetweenPositions(output_picture, 740, 900, 'ř')
-    output_picture.picture.save_svg('example.svg')
+    output_picture.picture.save_svg('output.svg')
 
 if __name__ == '__main__':
 	defopt.run(main)
