@@ -7,7 +7,6 @@
     Python Version: ≥3.11.5
 '''
 
-import defopt
 import drawsvg as svg
 import imagesize
 from dataclasses import dataclass
@@ -198,4 +197,4 @@ def main():
     output_picture.picture.save_svg('output.svg')
 
 if __name__ == '__main__':
-	defopt.run(main)
+    main()

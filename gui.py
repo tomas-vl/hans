@@ -7,8 +7,6 @@
     Python Version: ≥3.11.5
 '''
 
-from cairosvg import svg
-import defopt
 import PySimpleGUI as sg
 import imagesize
 from dataclasses import dataclass
@@ -127,7 +125,12 @@ def main():
 
                 # vygenerování finálního obrázku
                 output_spectrogram = svg_generator.InitializePicture(temp_spectrogram.width, temp_spectrogram.height, 40, user_input.filepath)
-                output_letter_positions: list[tuple[int, str]] = readjustLetterPositions(line_positions, letter_positions, output_spectrogram.border_size, output_spectrogram.border_size + output_spectrogram.width)
+                output_letter_positions: list[tuple[int, str]] = readjustLetterPositions(
+                    line_positions, 
+                    letter_positions, 
+                    output_spectrogram.border_size, 
+                    output_spectrogram.border_size + output_spectrogram.width
+                )
                 output_spectrogram = svg_generator.createFinalSVG(output_spectrogram, line_positions, output_letter_positions, user_input.frequency, user_input.duration)
                 output_spectrogram.picture.save_svg(output_filepath)
 
@@ -169,4 +172,4 @@ def main():
     return
 
 if __name__ == '__main__':
-	defopt.run(main)
+    main()
