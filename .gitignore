@@ -161,3 +161,4 @@ cython_debug/
 .svg
 test_input/02.png
 temp.png
+output/
