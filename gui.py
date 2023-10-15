@@ -7,6 +7,7 @@
     Python Version: ≥3.11.5
 '''
 
+from cairosvg import svg
 import defopt
 import PySimpleGUI as sg
 import imagesize
@@ -19,10 +20,30 @@ class UserInput:
     frequency: str = ''
     duration: str = ''
 
+def readjustLetterPositions(line_positions: list[int], letter_positions: list[tuple[int, str]], start: int, end: int) -> list[tuple[int, str]]:
+    temp_line_positions: list[int] = line_positions.copy()
+    temp_line_positions.append(start)
+    temp_line_positions.append(end)
+    temp_line_positions = sorted(temp_line_positions)
+
+    updated_letter_positions: list[tuple[int, str]] = letter_positions.copy()
+
+    for i in range(len(letter_positions)):
+        num: int = letter_positions[i][0]
+        
+        for j in range(len(temp_line_positions) - 1):
+            if temp_line_positions[j] <= num <= temp_line_positions[j + 1]:
+                average = (temp_line_positions[j] + temp_line_positions[j + 1]) // 2
+                updated_letter_positions[i] = (average, letter_positions[i][1])
+                break
+
+    return updated_letter_positions
+
 def main():
     user_input: UserInput = UserInput()
     line_positions: list[int] = list()
     letter_positions: list[tuple[int, str]] = list()
+    temp_spectrogram: svg_generator.Picture = None
 
     col_labels = [
         [sg.Text('Frekvence:')],
@@ -61,10 +82,9 @@ def main():
 
     window = sg.Window('hans', layout, resizable=True)
 
-    try:
-        image = window['-GRAPH-']
-    except:
-        return
+    image = window['-GRAPH-']
+    if isinstance(image, sg.ErrorElement):
+        return 1
 
     while True:
         event, values = window.read()
@@ -88,20 +108,28 @@ def main():
 
             new_width, new_height = [int(x) for x in imagesize.get(user_input.filepath)]   # načtení rozlišení původní bitmapy
 
-            picture_without_freq_and_dur: svg_generator.Picture = svg_generator.InitializePicture(new_width, new_height, 40, user_input.filepath)
-            picture_without_freq_and_dur = svg_generator.createBareBaseSVG(picture_without_freq_and_dur)
-            picture_without_freq_and_dur.picture.save_png('temp.png')
+            temp_spectrogram = svg_generator.InitializePicture(new_width, new_height, 40, user_input.filepath)
+            temp_spectrogram = svg_generator.createBareBaseSVG(temp_spectrogram)
+            temp_spectrogram.picture.save_png('temp.png')
             
-            image.set_size((picture_without_freq_and_dur.true_width(), picture_without_freq_and_dur.true_height()))
-            image.change_coordinates((0,0), (picture_without_freq_and_dur.true_width(), picture_without_freq_and_dur.true_height()))
+            image.set_size((temp_spectrogram.true_width(), temp_spectrogram.true_height()))
+            image.change_coordinates((0,0), (temp_spectrogram.true_width(), temp_spectrogram.true_height()))
 
             window['-GRAPH-'].erase()
             image.draw_image('temp.png', location=(0,image.CanvasSize[1]))
 
         elif event == '-SAVE_FILE-':
-            print(f'Ukládám soubor {user_input.filepath}')
-            # Získání složky kam pomocí sg.popup_get_folder
-            # uložení pomocí output_picture.picture.save_svg('output.svg')
+            if user_input.frequency == '' or user_input.duration == '' or user_input.filepath == '':
+                sg.popup('Chyba: Nebyla zadána jedna z požadovaných hodnot.', title='Chyba!', grab_anywhere=True, keep_on_top=True, any_key_closes=True)
+            else:
+                output_filepath: str = sg.popup_get_file("Save As", save_as=True)
+                print(f'Ukládám soubor {user_input.filepath} do {output_filepath}')
+
+                # vygenerování finálního obrázku
+                output_spectrogram = svg_generator.InitializePicture(temp_spectrogram.width, temp_spectrogram.height, 40, user_input.filepath)
+                output_letter_positions: list[tuple[int, str]] = readjustLetterPositions(line_positions, letter_positions, output_spectrogram.border_size, output_spectrogram.border_size + output_spectrogram.width)
+                output_spectrogram = svg_generator.createFinalSVG(output_spectrogram, line_positions, output_letter_positions, user_input.frequency, user_input.duration)
+                output_spectrogram.picture.save_svg(output_filepath)
 
         elif event == '-FREQ-':
             user_input.frequency = values['-FREQ-']
@@ -116,8 +144,8 @@ def main():
                 y: int = 0
                 x, y = values['-GRAPH-']    # získání polohy kurzoru
                 image.draw_line(            # vykreslení čáry do náhledu
-                    (x,picture_without_freq_and_dur.border_size),   # souřadnice náhledu začínají v levém dolním rohu
-                    (x,picture_without_freq_and_dur.border_size + picture_without_freq_and_dur.height), 
+                    (x,temp_spectrogram.border_size),   # souřadnice náhledu začínají v levém dolním rohu
+                    (x,temp_spectrogram.border_size + temp_spectrogram.height), 
                     width=4, 
                     color='red'
                 )
