@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
     File name: svg_generator.py
-    Author: Tomáš Vlček
+    Author: Tomáš Vlček <tvlcek@mail.muni.cz>
     Date created: 2023-10-10
     License: GNU General Public License v3.0
     Python Version: ≥3.11.5
@@ -17,7 +17,7 @@ from copy import deepcopy
 @dataclass
 class Picture:
     '''Wrapper around the SVG canvas.'''
-    picture_filepath: str
+    picture_filepath: str 
     picture: svg.Drawing
     width: int
     height: int
@@ -74,6 +74,28 @@ def createBaseSVG(owp: Picture, frequency: str, duration: str) -> Picture:
             x=owp.width + owp.border_size, 
             y=owp.border_size - 10, 
             text_anchor='end'
+        )
+    )
+    return owp
+
+def createBareBaseSVG(owp: Picture) -> Picture:
+    # owp: Picture = deepcopy(iwp)
+    owp.picture.append(
+        svg.Image(
+            owp.border_size, 
+            owp.border_size, 
+            owp.width, 
+            owp.height, 
+            owp.picture_filepath, 
+            embed=True
+        )
+    )
+    owp.picture.append(
+        svg.Rectangle(
+            owp.border_size,
+            owp.border_size, 
+            owp.width, owp.height, 
+            fill='none', stroke='black', stroke_width=3
         )
     )
     return owp
