@@ -40,6 +40,7 @@ def InitializePicture(width: int, height: int, border_size: int, picture_filepat
     return wrapped_picture
 
 def createBaseSVG(owp: Picture, frequency: str, duration: str) -> Picture:
+    '''Fills the SVG canvas with the bitmap, border and margin, and labels with frequency and duration.'''
     # owp: Picture = deepcopy(iwp)
     owp.picture.append(
         svg.Image(
@@ -61,7 +62,7 @@ def createBaseSVG(owp: Picture, frequency: str, duration: str) -> Picture:
     )
     owp.picture.append(
         svg.Text(
-            f'Frekvence 0—{frequency} Hz', 
+            f'Frekvence 0–{frequency} Hz', 
             font_size=owp.border_size - 15, 
             x=owp.border_size - 10, 
             y=owp.true_height() - owp.border_size, 
@@ -79,6 +80,7 @@ def createBaseSVG(owp: Picture, frequency: str, duration: str) -> Picture:
     return owp
 
 def createBareBaseSVG(owp: Picture) -> Picture:
+    '''Fills the SVG canvas with the bitmap, border and margin. No labels are added.'''
     # owp: Picture = deepcopy(iwp)
     owp.picture.append(
         svg.Image(
@@ -100,7 +102,19 @@ def createBareBaseSVG(owp: Picture) -> Picture:
     )
     return owp
 
+def createFinalSVG(iwp: Picture, lines: list[int], letters: list[tuple[int, str]], frequency: str, duration: str):
+    '''Fills the picture with everything, lines and all.'''
+    owp: Picture = createBaseSVG(iwp, frequency, duration)
+    for line_pos in lines:
+        owp = addLine(owp, line_pos)
+
+    for pos_and_letter in letters:
+        owp = addLetterAtPosition(owp, pos_and_letter[0], pos_and_letter[1])
+
+    return owp
+
 def addLine(owp: Picture, position: int) -> Picture:
+    '''Adds a vertical line to the SVG canvas at the specified `position`.'''
     # owp: Picture = deepcopy(iwp)
     
     owp.picture.append(
@@ -111,12 +125,25 @@ def addLine(owp: Picture, position: int) -> Picture:
             owp.height + owp.border_size, 
             stroke='red', 
             stroke_width=3, 
-            stroke_dasharray='5 3'
+            stroke_dasharray='6 12'
         )
     )
     return owp;
 
+def addLetterAtPosition(owp: Picture, position: int, letter: str) -> Picture:
+    owp.picture.append(
+        svg.Text(
+            f'{letter}', 
+            font_size = owp.border_size - 15, 
+            x = position, 
+            y = owp.height + owp.border_size + 25, 
+            text_anchor = 'middle',
+        )
+    )
+    return owp
+
 def addLettersAroundPosition(owp: Picture, position: int, letter_1: str, letter_2: str) -> Picture:
+    '''Adds `letter_1` and `letter_2` to the bottom margin of the SVG canvas around the specified `position`.'''
     position_shift: int = 15
     owp.picture.append(
         svg.Text(
@@ -139,6 +166,7 @@ def addLettersAroundPosition(owp: Picture, position: int, letter_1: str, letter_
     return owp
 
 def addLetterBetweenPositions(owp: Picture, left_pos: int, right_pos: int, letter: str) -> Picture:
+    '''Adds `letter` to the bottom margin of the SVG canvas between `left_pos` and `right_pos`.'''
     letter_pos: int = (left_pos + right_pos) // 2
     owp.picture.append(
         svg.Text(
@@ -146,10 +174,11 @@ def addLetterBetweenPositions(owp: Picture, left_pos: int, right_pos: int, lette
             font_size = owp.border_size - 15, 
             x = letter_pos, 
             y = owp.height + owp.border_size + 25, 
-            text_anchor = 'end'
+            text_anchor = 'middle',
         )
     )
     return owp
+
 
 def main():
     width: int = 0
@@ -158,14 +187,14 @@ def main():
     print(width, height)
 
     output_picture: Picture = InitializePicture(width, height, 40, 'test_input/01.png')
-    output_picture = createBaseSVG(output_picture, '1848', '18,48')
+    lines = [30, 150, 350, 600]
+    letters = [
+        (90, 'á'),
+        (250, 'óó'),
+        (475, 'další písmeno')
+    ]
+    output_picture = createFinalSVG(output_picture, lines, letters, '50', '500')
 
-    output_picture = addLine(output_picture, 350)
-    output_picture = addLettersAroundPosition(output_picture, 350, 'a', 'é')
-
-    output_picture = addLine(output_picture, 740)
-    output_picture = addLine(output_picture, 900)
-    output_picture = addLetterBetweenPositions(output_picture, 740, 900, 'ř')
     output_picture.picture.save_svg('output.svg')
 
 if __name__ == '__main__':
