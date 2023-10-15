@@ -3,7 +3,7 @@
     File name: svg_generator.py
     Author: Tomáš Vlček <tvlcek@mail.muni.cz>
     Date created: 2023-10-10
-    License: GNU General Public License v3.0
+    License: European Union Public License 1.2
     Python Version: ≥3.11.5
 '''
 
