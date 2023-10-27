@@ -6,24 +6,36 @@ import (
 
 	"github.com/gabstv/ebiten-imgui/renderer"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/inkyblackness/imgui-go/v4"
 	"github.com/sqweek/dialog"
 )
 
 type G struct {
-	mgr          *renderer.Manager
+	mgr *renderer.Manager
+
 	drawing_type int
 	duration     string
-	filepath     string
 	freq         string
-	retina       bool
-	w, h         int
+	filepath     string
+
+	img *ebiten.Image
+
+	retina bool
+	w, h   int
+}
+
+var (
+	white = ebiten.NewImage(1, 1)
+)
+
+func init() {
+	white.Fill(color.White)
 }
 
 func (g *G) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{40, 40, 40, 255})
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f", ebiten.ActualTPS()))
+	//	ebitenutil.DebugPrint(screen, msg)
+
+	screen.DrawImage(g.img, nil)
 	g.mgr.Draw(screen)
 }
 
@@ -45,9 +57,16 @@ func (g *G) Update() error {
 				var err error
 				g.filepath, err = dialog.File().Filter("PNG image", "png").Load()
 				if err != nil {
-					panic(err)
+					fmt.Println("Chyba: Nebyl vybrán žádný soubor!")
 				}
 				fmt.Println("Načten soubor:", g.filepath)
+				ebiten.SetWindowTitle(fmt.Sprintf("Hans — %s", g.filepath))
+
+				imgimg := OpenImage(g.filepath)
+				g.img = ebiten.NewImageFromImage(imgimg)
+				if err != nil {
+					panic(err)
+				}
 			}
 			imgui.SameLine()
 			imgui.Text(g.filepath)
@@ -62,10 +81,16 @@ func (g *G) Update() error {
 			if imgui.Button("Save image") {
 				output_filepath, err := dialog.File().Filter("PNG image", "png").Save()
 				if err != nil {
-					panic(err)
+					fmt.Println("Chyba: Nebylo zvoleno, kam uložit soubor!")
 				}
 				// tady zavolat funkci, co soubor doopravdy uloží
 				fmt.Println("Uložen soubor:", output_filepath)
+			}
+
+			if imgui.Button("Print stuff") {
+				fmt.Println("Frekvence:", g.freq)
+				fmt.Println("Trvání:", g.duration)
+				fmt.Println("Vybraný spetrogram", g.filepath)
 			}
 		}
 
@@ -104,6 +129,7 @@ func main() {
 	ren := renderer.New(nil)
 
 	ebiten.SetWindowSize(1280, 720)
+	ebiten.SetVsyncEnabled(true)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowTitle("Hans")
 
@@ -113,6 +139,7 @@ func main() {
 		duration:     "",
 		filepath:     "No file selected",
 		freq:         "",
+		img:          ebiten.NewImage(1, 1),
 	}
 
 	ebiten.RunGame(gg)
