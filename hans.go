@@ -8,8 +8,8 @@ import (
 	"github.com/gabstv/ebiten-imgui/renderer"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/inkyblackness/imgui-go/v4"
+	"github.com/jakecoffman/cp"
 	camera "github.com/melonfunction/ebiten-camera"
-	input "github.com/quasilyte/ebitengine-input"
 	"github.com/sqweek/dialog"
 )
 
@@ -27,19 +27,16 @@ type G struct {
 
 	retina bool
 	w, h   int
-
-	inputHandler *input.Handler
-	inputSystem  input.System
 }
 
 var (
 	white = ebiten.NewImage(1, 1)
+	zoom  = 1.0
 )
 
 const (
-	ActionUnknown input.Action = iota
-	ActionScrollVertical
-	ActionMouseClick
+	zoom_min   = 0.5
+	zoom_max   = 5.0
 	zoom_speed = 0.1
 )
 
@@ -50,6 +47,7 @@ func init() {
 func (g *G) Draw(screen *ebiten.Image) {
 	//	ebitenutil.DebugPrint(screen, msg)
 	// bílé pozadí
+	g.cam.Surface.Clear()
 	g.cam.Surface.Fill(color.White)
 
 	ebiten_image := ebiten.NewImageFromImage(g.picture.canvas.Image())
@@ -91,6 +89,9 @@ func (g *G) Update() error {
 				g.picture = InitializePicture(g.filepath, pic_width, pic_height, 45)
 				g.picture = DrawBitmap(g.picture, input_pic)
 				g.picture = DrawRectangle(g.picture)
+
+				// resetování zoomu
+				g.cam.SetZoom(1.0)
 			}
 			imgui.SameLine()
 			imgui.Text(g.filepath)
@@ -129,10 +130,12 @@ func (g *G) Update() error {
 			imgui.Text(fmt.Sprintf("Frekvence:\t%s", g.freq))
 			imgui.Text(fmt.Sprintf("Trvání:\t%s", g.duration))
 			imgui.Text(fmt.Sprintf("Vybraný spetrogram:\t%s", g.filepath))
+			imgui.Text(fmt.Sprintf("Zoom:\t%f", g.cam.Scale))
 			if imgui.Button("Print stuff") {
 				fmt.Println("Frekvence:", g.freq)
 				fmt.Println("Trvání:", g.duration)
 				fmt.Println("Vybraný spetrogram", g.filepath)
+				fmt.Println("Zoom", g.cam.Scale)
 			}
 		}
 		imgui.End()
@@ -142,16 +145,32 @@ func (g *G) Update() error {
 
 	// Ovládání
 	// zoom při skrolování
-	g.inputSystem.Update()
-	if info, ok := g.inputHandler.JustPressedActionInfo(ActionScrollVertical); ok {
-		if info.Pos.Y > 0 {
-			g.cam.Zoom(1.1)
-		} else if info.Pos.Y < 0 {
-			g.cam.Zoom(0.9)
+	_, scroll_amount := ebiten.Wheel()
+	if scroll_amount > 0 {
+		zoom += zoom_speed
+	} else if scroll_amount < 0 {
+		zoom -= zoom_speed
+	}
+	zoom = cp.Clamp(zoom, zoom_min, zoom_max)
+	g.cam.SetZoom(zoom)
+
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonMiddle) {
+		cx, cy := ebiten.CursorPosition()
+		ccx, ccy := float64(cx)/zoom, float64(cy)/zoom
+		wx, wy := g.cam.GetCursorCoords()
+		fmt.Printf("X %d\tY %d\n", cx, cy)
+		fmt.Printf("Cursor coords:\tX %f\tY %f\n", ccx, ccy)
+		fmt.Printf("World coords:\tX %f\tY %f\n", wx, wy)
+
+		if g.drawing_type == 0 {
+			g.picture = DrawLine(g.picture, ccx)
+		} else if g.drawing_type == 1 {
+			letter_pos := 1.9
+			letter := "a"
+			g.picture = DrawLetter(g.picture, letter_pos, letter)
 		}
 	}
 
-	// klikání
 	return nil
 }
 
@@ -192,17 +211,6 @@ func main() {
 		picture:      empty_picture,
 		cam:          cam,
 	}
-
-	gg.inputSystem.Init(input.SystemConfig{
-		DevicesEnabled: input.AnyDevice,
-	})
-
-	keymap := input.Keymap{
-		ActionScrollVertical: {input.KeyWheelVertical},
-		ActionMouseClick:     {input.KeyMouseLeft},
-	}
-
-	gg.inputHandler = gg.inputSystem.NewHandler(0, keymap)
 
 	ebiten.RunGame(gg)
 }
