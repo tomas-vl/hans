@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"sort"
 
 	"git.sr.ht/~sbinet/gg"
 	"github.com/golang/freetype/truetype"
@@ -19,6 +20,11 @@ type Picture struct {
 	iY0         float64
 	iX1         float64
 	iY1         float64
+}
+
+type Pair struct {
+	letter string
+	pos    float64
 }
 
 func OpenImage(filepath string) image.Image {
@@ -132,4 +138,27 @@ func GetResolution(img image.Image) (float64, float64) {
 	pic_width := float64(bounds.Dx())
 	pic_height := float64(bounds.Dy())
 	return pic_width, pic_height
+}
+
+func CalculateLetterPositions(line_positions []float64, letter_positions []Pair, start float64, end float64) []Pair {
+	temp_line_positions := make([]float64, len(line_positions)+2)
+	copy(temp_line_positions, line_positions)
+	temp_line_positions = append(temp_line_positions, start, end)
+	sort.Float64s(temp_line_positions)
+
+	new_letter_positions := []Pair{}
+	copy(new_letter_positions, letter_positions)
+
+	for i := 0; i < len(letter_positions); i++ {
+		letter_pos := letter_positions[i].pos
+
+		for j := 0; j < (len(temp_line_positions) - 1); j++ {
+			if temp_line_positions[j] <= letter_pos && letter_pos <= temp_line_positions[j+1] {
+				average := (temp_line_positions[j] + temp_line_positions[j+1]) / 2
+				new_letter_positions[i] = Pair{letter_positions[i].letter, average}
+				break
+			}
+		}
+	}
+	return new_letter_positions
 }
