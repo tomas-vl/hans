@@ -119,6 +119,7 @@ func DrawLabels(pic Picture, frequency string, duration string) Picture {
 func DrawLetter(pic Picture, x_position float64, letter string) Picture {
 	y_position := pic.orig_height + pic.border_size + 20
 	letter_width, _ := pic.canvas.MeasureString(letter)
+	pic.canvas.SetRGB(0, 0, 0)
 	pic.canvas.DrawStringWrapped(letter, x_position, y_position, 0.5, 0.5, letter_width, 0, 1)
 	return pic
 }
@@ -146,7 +147,7 @@ func CalculateLetterPositions(line_positions []float64, letter_positions []Pair,
 	temp_line_positions = append(temp_line_positions, start, end)
 	sort.Float64s(temp_line_positions)
 
-	new_letter_positions := []Pair{}
+	new_letter_positions := make([]Pair, len(letter_positions))
 	copy(new_letter_positions, letter_positions)
 
 	for i := 0; i < len(letter_positions); i++ {
