@@ -30,8 +30,10 @@ type G struct {
 }
 
 var (
-	white = ebiten.NewImage(1, 1)
-	zoom  = 1.0
+	lines   []float64 = []float64{}
+	letters []Pair    = []Pair{}
+	white             = ebiten.NewImage(1, 1)
+	zoom              = 1.0
 )
 
 const (
@@ -108,7 +110,27 @@ func (g *G) Update() error {
 				if err != nil {
 					fmt.Println("Chyba: Nebylo zvoleno, kam uložit soubor!")
 				}
-				// tady zavolat funkci, co soubor doopravdy uloží
+
+				sav_input_pic := OpenImage(g.filepath)
+				sav_bounds := sav_input_pic.Bounds()
+				sav_pic_width := float64(sav_bounds.Dx())
+				sav_pic_height := float64(sav_bounds.Dy())
+				sav_output_picture := InitializePicture(g.filepath, sav_pic_width, sav_pic_height, 45)
+				sav_output_picture = DrawBitmap(sav_output_picture, sav_input_pic)
+
+				for i := 0; i < len(lines); i++ {
+					sav_output_picture = DrawLine(sav_output_picture, lines[i])
+				}
+
+				letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
+				for i := 0; i < len(letters); i++ {
+					sav_output_picture = DrawLetter(sav_output_picture, letters[i].pos, letters[i].letter)
+				}
+
+				sav_output_picture = DrawRectangle(sav_output_picture)
+				sav_output_picture = DrawLabels(sav_output_picture, g.freq, g.duration)
+
+				sav_output_picture.canvas.SavePNG(output_filepath)
 				fmt.Println("Uložen soubor:", output_filepath)
 			}
 		}
@@ -136,6 +158,9 @@ func (g *G) Update() error {
 				fmt.Println("Trvání:", g.duration)
 				fmt.Println("Vybraný spetrogram", g.filepath)
 				fmt.Println("Zoom", g.cam.Scale)
+
+				letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
+				fmt.Println(letters)
 			}
 		}
 		imgui.End()
@@ -163,11 +188,17 @@ func (g *G) Update() error {
 		fmt.Printf("World coords:\tX %f\tY %f\n", wx, wy)
 
 		if g.drawing_type == 0 {
+			line_pos := ccx
 			g.picture = DrawLine(g.picture, ccx)
+			lines = append(lines, line_pos)
+			fmt.Println(lines)
 		} else if g.drawing_type == 1 {
-			letter_pos := 1.9
+			letter_pos := ccx
 			letter := "a"
 			g.picture = DrawLetter(g.picture, letter_pos, letter)
+			letters = append(letters, Pair{"a", letter_pos})
+			//letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
+			fmt.Println(letters)
 		}
 	}
 

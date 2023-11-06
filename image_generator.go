@@ -141,7 +141,7 @@ func GetResolution(img image.Image) (float64, float64) {
 	return pic_width, pic_height
 }
 
-func CalculateLetterPositions(line_positions []float64, letter_positions []Pair, start float64, end float64) []Pair {
+func RecalculateLetterPositions(line_positions []float64, letter_positions []Pair, start float64, end float64) []Pair {
 	temp_line_positions := make([]float64, len(line_positions)+2)
 	copy(temp_line_positions, line_positions)
 	temp_line_positions = append(temp_line_positions, start, end)
