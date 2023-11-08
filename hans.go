@@ -20,8 +20,10 @@ type G struct {
 	duration     string
 	freq         string
 	filepath     string
+	letter       string
 
-	picture Picture
+	picture      Picture
+	ebiten_image *ebiten.Image
 
 	cam *camera.Camera
 
@@ -52,8 +54,7 @@ func (g *G) Draw(screen *ebiten.Image) {
 	g.cam.Surface.Clear()
 	g.cam.Surface.Fill(color.White)
 
-	ebiten_image := ebiten.NewImageFromImage(g.picture.canvas.Image())
-	g.cam.Surface.DrawImage(ebiten_image, nil)
+	g.cam.Surface.DrawImage(g.ebiten_image, nil)
 
 	// vykreslení GUI
 	g.cam.Blit(screen)
@@ -92,6 +93,8 @@ func (g *G) Update() error {
 				g.picture = DrawBitmap(g.picture, input_pic)
 				g.picture = DrawRectangle(g.picture)
 
+				g.ebiten_image = ebiten.NewImageFromImage(g.picture.canvas.Image())
+
 				// resetování zoomu
 				g.cam.SetZoom(1.0)
 			}
@@ -102,6 +105,7 @@ func (g *G) Update() error {
 
 			imgui.InputText("Frequency", &g.freq)
 			imgui.InputText("Duration", &g.duration)
+			imgui.InputText("Letter", &g.letter)
 
 			imgui.Spacing()
 
@@ -134,7 +138,6 @@ func (g *G) Update() error {
 				fmt.Println("Uložen soubor:", output_filepath)
 			}
 		}
-
 		imgui.End()
 
 		// Tady je druhé podokno. V něm se vybírá, co se bude kreslit (čáry či písmena).
@@ -160,7 +163,7 @@ func (g *G) Update() error {
 				fmt.Println("Zoom", g.cam.Scale)
 
 				letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
-				fmt.Println(letters)
+				// fmt.Println(letters)
 			}
 		}
 		imgui.End()
@@ -179,27 +182,27 @@ func (g *G) Update() error {
 	zoom = cp.Clamp(zoom, zoom_min, zoom_max)
 	g.cam.SetZoom(zoom)
 
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonMiddle) {
-		cx, cy := ebiten.CursorPosition()
-		ccx, ccy := float64(cx)/zoom, float64(cy)/zoom
-		wx, wy := g.cam.GetCursorCoords()
-		fmt.Printf("X %d\tY %d\n", cx, cy)
-		fmt.Printf("Cursor coords:\tX %f\tY %f\n", ccx, ccy)
-		fmt.Printf("World coords:\tX %f\tY %f\n", wx, wy)
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && !imgui.CurrentIO().WantCaptureMouse() {
+		cx, _ := ebiten.CursorPosition()
+		ccx := float64(cx) / zoom
+		//wx, wy := g.cam.GetCursorCoords()
+		// fmt.Printf("X %d\tY %d\n", cx, cy)
+		// fmt.Printf("Cursor coords:\tX %f\tY %f\n", ccx, ccy)
+		// fmt.Printf("World coords:\tX %f\tY %f\n", wx, wy)
 
 		if g.drawing_type == 0 {
 			line_pos := ccx
 			g.picture = DrawLine(g.picture, ccx)
 			lines = append(lines, line_pos)
-			fmt.Println(lines)
+			// fmt.Println(lines)
 		} else if g.drawing_type == 1 {
 			letter_pos := ccx
-			letter := "a"
-			g.picture = DrawLetter(g.picture, letter_pos, letter)
-			letters = append(letters, Pair{"a", letter_pos})
+			g.picture = DrawLetter(g.picture, letter_pos, g.letter)
+			letters = append(letters, Pair{g.letter, letter_pos})
 			//letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
-			fmt.Println(letters)
+			// fmt.Println(letters)
 		}
+		g.ebiten_image = ebiten.NewImageFromImage(g.picture.canvas.Image())
 	}
 
 	return nil
@@ -239,8 +242,10 @@ func main() {
 		duration:     "",
 		filepath:     "No file selected",
 		freq:         "",
+		letter:       "",
 		picture:      empty_picture,
 		cam:          cam,
+		ebiten_image: ebiten.NewImage(1, 1),
 	}
 
 	ebiten.RunGame(gg)
