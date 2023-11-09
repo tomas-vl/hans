@@ -39,8 +39,8 @@ var (
 )
 
 const (
-	zoom_min   = 0.5
-	zoom_max   = 5.0
+	zoom_min   = 0.25
+	zoom_max   = 10.0
 	zoom_speed = 0.1
 )
 
@@ -49,7 +49,6 @@ func init() {
 }
 
 func (g *G) Draw(screen *ebiten.Image) {
-	//	ebitenutil.DebugPrint(screen, msg)
 	// bílé pozadí
 	g.cam.Surface.Clear()
 	g.cam.Surface.Fill(color.White)
@@ -59,6 +58,7 @@ func (g *G) Draw(screen *ebiten.Image) {
 	// vykreslení GUI
 	g.cam.Blit(screen)
 	g.mgr.Draw(screen)
+	//ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()))
 }
 
 func (g *G) Update() error {
