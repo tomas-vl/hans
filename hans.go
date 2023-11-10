@@ -5,18 +5,16 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/gabstv/ebiten-imgui/renderer"
+	imgui "github.com/gabstv/cimgui-go"
+	ebimgui "github.com/gabstv/ebiten-imgui/v3"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/inkyblackness/imgui-go/v4"
 	"github.com/jakecoffman/cp"
 	camera "github.com/melonfunction/ebiten-camera"
 	"github.com/sqweek/dialog"
 )
 
 type G struct {
-	mgr *renderer.Manager
-
-	drawing_type int
+	drawing_type bool
 	duration     string
 	freq         string
 	filepath     string
@@ -57,14 +55,14 @@ func (g *G) Draw(screen *ebiten.Image) {
 
 	// vykreslení GUI
 	g.cam.Blit(screen)
-	g.mgr.Draw(screen)
+	ebimgui.Draw(screen)
 	//ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()))
 }
 
 func (g *G) Update() error {
 	// Začátek práce s GUI
-	g.mgr.Update(1.0 / 60.0)
-	g.mgr.BeginFrame()
+	ebimgui.Update(1.0 / 60.0)
+	ebimgui.BeginFrame()
 	{
 		default_window_size := imgui.Vec2{
 			X: 280,
@@ -103,9 +101,9 @@ func (g *G) Update() error {
 
 			imgui.Spacing()
 
-			imgui.InputText("Frequency", &g.freq)
-			imgui.InputText("Duration", &g.duration)
-			imgui.InputText("Letter", &g.letter)
+			// imgui.InputText("Frequency", &g.freq)
+			// imgui.InputText("Duration", &g.duration)
+			// imgui.InputText("Letter", &g.letter)
 
 			imgui.Spacing()
 
@@ -145,30 +143,34 @@ func (g *G) Update() error {
 		imgui.Begin("DRAWING SELECTOR")
 		{
 			imgui.Text("Select what you want to draw:")
-			imgui.RadioButtonInt("Line", &g.drawing_type, 0)
-			imgui.RadioButtonInt("Letter", &g.drawing_type, 1)
-		}
-		imgui.End()
-
-		imgui.Begin("DEBUG")
-		{
-			imgui.Text(fmt.Sprintf("Frekvence:\t%s", g.freq))
-			imgui.Text(fmt.Sprintf("Trvání:\t%s", g.duration))
-			imgui.Text(fmt.Sprintf("Vybraný spetrogram:\t%s", g.filepath))
-			imgui.Text(fmt.Sprintf("Zoom:\t%f", g.cam.Scale))
-			if imgui.Button("Print stuff") {
-				fmt.Println("Frekvence:", g.freq)
-				fmt.Println("Trvání:", g.duration)
-				fmt.Println("Vybraný spetrogram", g.filepath)
-				fmt.Println("Zoom", g.cam.Scale)
-
-				letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
-				// fmt.Println(letters)
+			if imgui.RadioButtonBool("Line", !g.drawing_type) {
+				g.drawing_type = false
+			}
+			if imgui.RadioButtonBool("Letter", g.drawing_type) {
+				g.drawing_type = true
 			}
 		}
 		imgui.End()
+
+		// imgui.Begin("DEBUG")
+		// {
+		// 	imgui.Text(fmt.Sprintf("Frekvence:\t%s", g.freq))
+		// 	imgui.Text(fmt.Sprintf("Trvání:\t%s", g.duration))
+		// 	imgui.Text(fmt.Sprintf("Vybraný spetrogram:\t%s", g.filepath))
+		// 	imgui.Text(fmt.Sprintf("Zoom:\t%f", g.cam.Scale))
+		// 	if imgui.Button("Print stuff") {
+		// 		fmt.Println("Frekvence:", g.freq)
+		// 		fmt.Println("Trvání:", g.duration)
+		// 		fmt.Println("Vybraný spetrogram", g.filepath)
+		// 		fmt.Println("Zoom", g.cam.Scale)
+
+		// 		letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
+		// 		// fmt.Println(letters)
+		// 	}
+		// }
+		// imgui.End()
 	}
-	g.mgr.EndFrame()
+	ebimgui.EndFrame()
 	// Konec práce s GUI
 
 	// Ovládání
@@ -190,12 +192,12 @@ func (g *G) Update() error {
 		// fmt.Printf("Cursor coords:\tX %f\tY %f\n", ccx, ccy)
 		// fmt.Printf("World coords:\tX %f\tY %f\n", wx, wy)
 
-		if g.drawing_type == 0 {
+		if !g.drawing_type {
 			line_pos := ccx
 			g.picture = DrawLine(g.picture, ccx)
 			lines = append(lines, line_pos)
 			// fmt.Println(lines)
-		} else if g.drawing_type == 1 {
+		} else if g.drawing_type {
 			letter_pos := ccx
 			g.picture = DrawLetter(g.picture, letter_pos, g.letter)
 			letters = append(letters, Pair{g.letter, letter_pos})
@@ -217,13 +219,12 @@ func (g *G) Layout(outsideWidth, outsideHeight int) (int, int) {
 		g.w = outsideWidth
 		g.h = outsideHeight
 	}
-	g.mgr.SetDisplaySize(float32(g.w), float32(g.h))
+	ebimgui.SetDisplaySize(float32(g.w), float32(g.h))
 	g.cam.Resize(g.w, g.h)
 	return g.w, g.h
 }
 
 func main() {
-	ren := renderer.New(nil)
 
 	ebiten.SetWindowSize(1280, 720)
 	ebiten.SetVsyncEnabled(true)
@@ -237,8 +238,7 @@ func main() {
 	empty_picture = DrawBitmap(empty_picture, image.NewRGBA(image.Rect(0, 0, 1, 1)))
 
 	gg := &G{
-		mgr:          ren,
-		drawing_type: 0,
+		drawing_type: false,
 		duration:     "",
 		filepath:     "No file selected",
 		freq:         "",
