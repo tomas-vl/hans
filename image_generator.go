@@ -59,7 +59,7 @@ func InitializePicture(filepath string, width float64, height float64, border_si
 		iY1:         height,
 	}
 	// načtení písma
-	font_filepath := "font/CharisSIL-Regular.ttf"
+	font_filepath := "font/CharisSIL/CharisSIL-Regular.ttf"
 	font_bytes, err := os.ReadFile(font_filepath)
 	if err != nil {
 		panic(err)

@@ -8,6 +8,7 @@ import (
 	imgui "github.com/gabstv/cimgui-go"
 	ebimgui "github.com/gabstv/ebiten-imgui/v3"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/jakecoffman/cp"
 	camera "github.com/melonfunction/ebiten-camera"
 	"github.com/sqweek/dialog"
@@ -23,7 +24,8 @@ type G struct {
 	picture      Picture
 	ebiten_image *ebiten.Image
 
-	cam *camera.Camera
+	cam     *camera.Camera
+	manager *ebimgui.Manager
 
 	retina bool
 	w, h   int
@@ -34,6 +36,7 @@ var (
 	letters []Pair    = []Pair{}
 	white             = ebiten.NewImage(1, 1)
 	zoom              = 1.0
+	font    *imgui.Font
 )
 
 const (
@@ -55,24 +58,26 @@ func (g *G) Draw(screen *ebiten.Image) {
 
 	// vykreslení GUI
 	g.cam.Blit(screen)
-	ebimgui.Draw(screen)
+	g.manager.Draw(screen)
 	//ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()))
 }
 
 func (g *G) Update() error {
 	// Začátek práce s GUI
-	ebimgui.Update(1.0 / 60.0)
-	ebimgui.BeginFrame()
+	g.manager.Update(1.0 / 60.0)
+	g.manager.BeginFrame()
 	{
-		default_window_size := imgui.Vec2{
-			X: 280,
-			Y: 150,
-		}
+		// default_window_size := imgui.Vec2{
+		// 	X: 280,
+		// 	Y: 150,
+		// }
+		//imgui.PushFont(font)
 
 		// Zde je první podokno. To se stará o vstup a výstup.
-		imgui.SetNextWindowSize(default_window_size)
+		//imgui.SetNextWindowSize(default_window_size)
 		imgui.Begin("INPUT & OUTPUT")
 		{
+			imgui.ShowStyleEditor()
 			if imgui.Button("Select image") {
 				var err error
 				g.filepath, err = dialog.File().Filter("PNG image", "png").Load()
@@ -101,9 +106,9 @@ func (g *G) Update() error {
 
 			imgui.Spacing()
 
-			// imgui.InputText("Frequency", &g.freq)
-			// imgui.InputText("Duration", &g.duration)
-			// imgui.InputText("Letter", &g.letter)
+			imgui.InputTextWithHint("Frequency", "", &g.freq, 0, nil)
+			imgui.InputTextWithHint("Duration", "", &g.duration, 0, nil)
+			imgui.InputTextWithHint("Letter", "", &g.letter, 0, nil)
 
 			imgui.Spacing()
 
@@ -139,7 +144,7 @@ func (g *G) Update() error {
 		imgui.End()
 
 		// Tady je druhé podokno. V něm se vybírá, co se bude kreslit (čáry či písmena).
-		imgui.SetNextWindowSize(default_window_size)
+		//imgui.SetNextWindowSize(default_window_size)
 		imgui.Begin("DRAWING SELECTOR")
 		{
 			imgui.Text("Select what you want to draw:")
@@ -170,7 +175,7 @@ func (g *G) Update() error {
 		// }
 		// imgui.End()
 	}
-	ebimgui.EndFrame()
+	g.manager.EndFrame()
 	// Konec práce s GUI
 
 	// Ovládání
@@ -184,7 +189,8 @@ func (g *G) Update() error {
 	zoom = cp.Clamp(zoom, zoom_min, zoom_max)
 	g.cam.SetZoom(zoom)
 
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && !imgui.CurrentIO().WantCaptureMouse() {
+	// vykreslení čáry či písmena při kliknutí
+	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) && !imgui.CurrentIO().WantCaptureMouse() {
 		cx, _ := ebiten.CursorPosition()
 		ccx := float64(cx) / zoom
 		//wx, wy := g.cam.GetCursorCoords()
@@ -219,7 +225,7 @@ func (g *G) Layout(outsideWidth, outsideHeight int) (int, int) {
 		g.w = outsideWidth
 		g.h = outsideHeight
 	}
-	ebimgui.SetDisplaySize(float32(g.w), float32(g.h))
+	g.manager.SetDisplaySize(float32(g.w), float32(g.h))
 	g.cam.Resize(g.w, g.h)
 	return g.w, g.h
 }
@@ -233,9 +239,15 @@ func main() {
 
 	cam := camera.NewCamera(1280, 720, 0, 0, 0, 1)
 	cam.SetZoom(1.0)
-
 	empty_picture := InitializePicture("", 1, 1, 0)
 	empty_picture = DrawBitmap(empty_picture, image.NewRGBA(image.Rect(0, 0, 1, 1)))
+
+	io := imgui.CurrentIO()
+
+	font = io.Fonts().AddFontFromFileTTF("font/NotoSans/NotoSans-Regular.ttf", float32(18))
+	io.Fonts().Build()
+
+	manager := ebimgui.NewManager(io.Fonts())
 
 	gg := &G{
 		drawing_type: false,
@@ -245,6 +257,7 @@ func main() {
 		letter:       "",
 		picture:      empty_picture,
 		cam:          cam,
+		manager:      manager,
 		ebiten_image: ebiten.NewImage(1, 1),
 	}
 
