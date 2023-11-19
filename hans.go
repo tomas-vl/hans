@@ -8,6 +8,7 @@ import (
 	imgui "github.com/gabstv/cimgui-go"
 	ebimgui "github.com/gabstv/ebiten-imgui/v3"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/jakecoffman/cp"
 	camera "github.com/melonfunction/ebiten-camera"
@@ -24,8 +25,7 @@ type G struct {
 	picture      Picture
 	ebiten_image *ebiten.Image
 
-	cam     *camera.Camera
-	manager *ebimgui.Manager
+	cam *camera.Camera
 
 	retina bool
 	w, h   int
@@ -36,7 +36,7 @@ var (
 	letters []Pair    = []Pair{}
 	white             = ebiten.NewImage(1, 1)
 	zoom              = 1.0
-	font    *imgui.Font
+	font1   *imgui.Font
 )
 
 const (
@@ -58,28 +58,22 @@ func (g *G) Draw(screen *ebiten.Image) {
 
 	// vykreslení GUI
 	g.cam.Blit(screen)
-	g.manager.Draw(screen)
-	//ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()))
+	ebimgui.Draw(screen)
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %0.2f", ebiten.ActualTPS()))
 }
 
 func (g *G) Update() error {
 	// Začátek práce s GUI
-	g.manager.Update(1.0 / 60.0)
-	g.manager.BeginFrame()
+	ebimgui.Update(1.0 / 60.0)
+	ebimgui.BeginFrame()
 	{
-		// default_window_size := imgui.Vec2{
-		// 	X: 280,
-		// 	Y: 150,
-		// }
-		//imgui.PushFont(font)
-
+		imgui.PushFont(font1)
 		// Zde je první podokno. To se stará o vstup a výstup.
-		//imgui.SetNextWindowSize(default_window_size)
 		imgui.Begin("INPUT & OUTPUT")
 		{
-			imgui.ShowStyleEditor()
 			if imgui.Button("Select image") {
 				var err error
+				// načtení cesty k obrázku
 				g.filepath, err = dialog.File().Filter("PNG image", "png").Load()
 				if err != nil {
 					fmt.Println("Chyba: Nebyl vybrán žádný soubor!")
@@ -87,12 +81,13 @@ func (g *G) Update() error {
 				fmt.Println("Načten soubor:", g.filepath)
 				ebiten.SetWindowTitle(fmt.Sprintf("Hans — %s", g.filepath))
 
-				//imgimg := OpenImage(g.filepath)
+				// vytvoření struktury, kterou se bude kreslit
 				input_pic := OpenImage(g.filepath)
 				bounds := input_pic.Bounds()
 				pic_width := float64(bounds.Dx())
 				pic_height := float64(bounds.Dy())
 				g.picture = InitializePicture(g.filepath, pic_width, pic_height, 45)
+				// vkreslení obrázku a okraje
 				g.picture = DrawBitmap(g.picture, input_pic)
 				g.picture = DrawRectangle(g.picture)
 
@@ -100,6 +95,10 @@ func (g *G) Update() error {
 
 				// resetování zoomu
 				g.cam.SetZoom(1.0)
+
+				// resetování výstupních čar a písmen
+				lines = nil
+				letters = nil
 			}
 			imgui.SameLine()
 			imgui.Text(g.filepath)
@@ -144,7 +143,6 @@ func (g *G) Update() error {
 		imgui.End()
 
 		// Tady je druhé podokno. V něm se vybírá, co se bude kreslit (čáry či písmena).
-		//imgui.SetNextWindowSize(default_window_size)
 		imgui.Begin("DRAWING SELECTOR")
 		{
 			imgui.Text("Select what you want to draw:")
@@ -156,26 +154,27 @@ func (g *G) Update() error {
 			}
 		}
 		imgui.End()
-
 		// imgui.Begin("DEBUG")
 		// {
 		// 	imgui.Text(fmt.Sprintf("Frekvence:\t%s", g.freq))
 		// 	imgui.Text(fmt.Sprintf("Trvání:\t%s", g.duration))
 		// 	imgui.Text(fmt.Sprintf("Vybraný spetrogram:\t%s", g.filepath))
 		// 	imgui.Text(fmt.Sprintf("Zoom:\t%f", g.cam.Scale))
+		// 	imgui.Text(fmt.Sprintf("Letters:\tv", letters))
 		// 	if imgui.Button("Print stuff") {
 		// 		fmt.Println("Frekvence:", g.freq)
 		// 		fmt.Println("Trvání:", g.duration)
 		// 		fmt.Println("Vybraný spetrogram", g.filepath)
 		// 		fmt.Println("Zoom", g.cam.Scale)
 
-		// 		letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
+		// 		//letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
 		// 		// fmt.Println(letters)
 		// 	}
 		// }
 		// imgui.End()
 	}
-	g.manager.EndFrame()
+	imgui.PopFont()
+	ebimgui.EndFrame()
 	// Konec práce s GUI
 
 	// Ovládání
@@ -193,22 +192,16 @@ func (g *G) Update() error {
 	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) && !imgui.CurrentIO().WantCaptureMouse() {
 		cx, _ := ebiten.CursorPosition()
 		ccx := float64(cx) / zoom
-		//wx, wy := g.cam.GetCursorCoords()
-		// fmt.Printf("X %d\tY %d\n", cx, cy)
-		// fmt.Printf("Cursor coords:\tX %f\tY %f\n", ccx, ccy)
-		// fmt.Printf("World coords:\tX %f\tY %f\n", wx, wy)
 
-		if !g.drawing_type {
+		if !g.drawing_type { // kreslení čar; g.drawing_type == false
 			line_pos := ccx
 			g.picture = DrawLine(g.picture, ccx)
 			lines = append(lines, line_pos)
-			// fmt.Println(lines)
-		} else if g.drawing_type {
+
+		} else if g.drawing_type { // kreslení písmen; g.drawing_type == true
 			letter_pos := ccx
 			g.picture = DrawLetter(g.picture, letter_pos, g.letter)
 			letters = append(letters, Pair{g.letter, letter_pos})
-			//letters = RecalculateLetterPositions(lines, letters, g.picture.border_size, float64(g.picture.canvas.Width())-g.picture.border_size)
-			// fmt.Println(letters)
 		}
 		g.ebiten_image = ebiten.NewImageFromImage(g.picture.canvas.Image())
 	}
@@ -225,7 +218,7 @@ func (g *G) Layout(outsideWidth, outsideHeight int) (int, int) {
 		g.w = outsideWidth
 		g.h = outsideHeight
 	}
-	g.manager.SetDisplaySize(float32(g.w), float32(g.h))
+	ebimgui.SetDisplaySize(float32(g.w), float32(g.h))
 	g.cam.Resize(g.w, g.h)
 	return g.w, g.h
 }
@@ -242,12 +235,18 @@ func main() {
 	empty_picture := InitializePicture("", 1, 1, 0)
 	empty_picture = DrawBitmap(empty_picture, image.NewRGBA(image.Rect(0, 0, 1, 1)))
 
-	io := imgui.CurrentIO()
+	// generování vlastního "GlyphRange" se zdá být rozbité
+	// var glyphs imgui.GlyphRange = imgui.NewGlyphRange()
+	// ranges_builder := imgui.NewFontGlyphRangesBuilder()
+	// ranges_builder.AddText("Frequency ")
+	// ranges_builder.BuildRanges(glyphs)
 
-	font = io.Fonts().AddFontFromFileTTF("font/NotoSans/NotoSans-Regular.ttf", float32(18))
-	io.Fonts().Build()
+	// cfg0 := imgui.NewFontConfig()
 
-	manager := ebimgui.NewManager(io.Fonts())
+	// font1 = imgui.CurrentIO().Fonts().AddFontFromFileTTFV("font/NotoSans/NotoSans-Regular.ttf", 16, cfg0, glyphs.Data())
+
+	font1 = imgui.CurrentIO().Fonts().AddFontFromFileTTF("font/NotoSans/NotoSans-Regular.ttf", 16.0)
+	imgui.CurrentIO().Fonts().Build()
 
 	gg := &G{
 		drawing_type: false,
@@ -257,7 +256,6 @@ func main() {
 		letter:       "",
 		picture:      empty_picture,
 		cam:          cam,
-		manager:      manager,
 		ebiten_image: ebiten.NewImage(1, 1),
 	}
 
