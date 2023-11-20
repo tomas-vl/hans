@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"strings"
 
 	imgui "github.com/gabstv/cimgui-go"
 	ebimgui "github.com/gabstv/ebiten-imgui/v3"
@@ -47,6 +48,14 @@ const (
 
 func init() {
 	white.Fill(color.White)
+}
+
+func appendFileExtension(filepath string, extension string) string {
+	if strings.HasSuffix(strings.ToLower(filepath), strings.ToLower(extension)) {
+		return filepath
+	} else {
+		return filepath + extension
+	}
 }
 
 func (g *G) Draw(screen *ebiten.Image) {
@@ -116,6 +125,7 @@ func (g *G) Update() error {
 				if err != nil {
 					fmt.Println("Chyba: Nebylo zvoleno, kam uložit soubor!")
 				}
+				output_filepath = appendFileExtension(output_filepath, ".png")
 
 				sav_input_pic := OpenImage(g.filepath)
 				sav_bounds := sav_input_pic.Bounds()
@@ -245,8 +255,10 @@ func main() {
 
 	// font1 = imgui.CurrentIO().Fonts().AddFontFromFileTTFV("font/NotoSans/NotoSans-Regular.ttf", 16, cfg0, glyphs.Data())
 
-	font1 = imgui.CurrentIO().Fonts().AddFontFromFileTTF("font/NotoSans/NotoSans-Regular.ttf", 16.0)
+	font1 = imgui.CurrentIO().Fonts().AddFontFromFileTTF("font/NotoSans/NotoSans-Medium.ttf", 16.0)
 	imgui.CurrentIO().Fonts().Build()
+
+	imgui.StyleColorsLight()
 
 	gg := &G{
 		drawing_type: false,
