@@ -182,8 +182,8 @@ func (g *G) Update() error {
 		// 	}
 		// }
 		// imgui.End()
+		imgui.PopFont()
 	}
-	imgui.PopFont()
 	ebimgui.EndFrame()
 	// Konec práce s GUI
 
